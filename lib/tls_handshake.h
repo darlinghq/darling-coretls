@@ -36,6 +36,12 @@ typedef struct DNListElem
 typedef struct _tls_private_key *tls_private_key_t;
 typedef void *tls_private_key_ctx_t;
 
+typedef void
+(*tls_private_key_ctx_retain)(tls_private_key_ctx_t ctx);
+
+typedef void
+(*tls_private_key_ctx_release)(tls_private_key_ctx_t ctx);
+
 typedef int
 (*tls_private_key_rsa_sign)(tls_private_key_ctx_t ctx, tls_hash_algorithm hash, const uint8_t *plaintext, size_t plaintextLen, uint8_t *sig, size_t *sigLen);
 typedef int
@@ -43,9 +49,42 @@ typedef int
 typedef int
 (*tls_private_key_ecdsa_sign)(tls_private_key_ctx_t ctx, const uint8_t *plaintext, size_t plaintextLen, uint8_t *sig, size_t *sigLen);
 
-tls_private_key_t tls_private_key_rsa_create(tls_private_key_ctx_t ctx, size_t size, tls_private_key_rsa_sign sign, tls_private_key_rsa_decrypt decrypt);
+
+typedef enum {
+    tls_private_key_type_rsa = 0,
+    tls_private_key_type_ecdsa = 1,
+} tls_private_key_type_t;
+
+typedef struct
+{
+    size_t size;    /* modulus size */
+    tls_private_key_rsa_sign sign;
+    tls_private_key_rsa_decrypt decrypt;
+} tls_private_key_desc_rsa_t;
+
+typedef struct {
+    size_t size;
+    uint16_t curve;
+    tls_private_key_ecdsa_sign sign;
+} tls_private_key_desc_ecdsa_t;
+
+typedef struct {
+    tls_private_key_type_t type;
+    union {
+        tls_private_key_desc_rsa_t rsa;
+        tls_private_key_desc_ecdsa_t ecdsa;
+    };
+} tls_private_key_desc_t;
+
+tls_private_key_t tls_private_key_create(tls_private_key_desc_t *desc, tls_private_key_ctx_t ctx,
+                                         tls_private_key_ctx_release ctx_release);
+
+/* Deprecated way to create private keys, equivalent to tls_private_key_create with ctx_release==NULL */
+tls_private_key_t tls_private_key_rsa_create(tls_private_key_ctx_t ctx, size_t size, tls_private_key_rsa_sign sign,
+                                             tls_private_key_rsa_decrypt decrypt);
 tls_private_key_t tls_private_key_ecdsa_create(tls_private_key_ctx_t ctx, size_t size,
-    uint16_t curve, tls_private_key_ecdsa_sign sign);
+                                               uint16_t curve, tls_private_key_ecdsa_sign sign);
+
 tls_private_key_ctx_t tls_private_key_get_context(tls_private_key_t key);
 void tls_private_key_destroy(tls_private_key_t key);
 
@@ -61,6 +100,10 @@ extern const uint16_t KnownCipherSuites[];
 /* Array of curves we support */
 extern const unsigned CurvesCount;
 extern const uint16_t KnownCurves[];
+
+/* Array of sigalgs we support */
+extern const unsigned SigAlgsCount;
+extern const tls_signature_and_hash_algorithm KnownSigAlgs[];
 
 /* handshake message types */
 typedef enum {
@@ -96,7 +139,7 @@ typedef enum {
     tls_handshake_config_default = 0,
     /* TLS v1.2 to SSLv3, with default + RC4 ciphersuites ciphersuites */
     tls_handshake_config_legacy = 1,
-    /* TLS v1.2 to TLS v1.0, with default ciphersuites (no RC4) */
+    /* TLS v1.2 to TLS v1.0, with default ciphersuites (no 3DES) */
     tls_handshake_config_standard = 2,
     /* TLS v1.2 to TLS v1.0, with defaults ciphersuites + RC4 */
     tls_handshake_config_RC4_fallback = 3,
@@ -110,7 +153,12 @@ typedef enum {
     tls_handshake_config_ATSv1_noPFS = 7,
     /* TLS v1.2 to SSLv3, defaults + RC4 + DHE ciphersuites */
     tls_handshake_config_legacy_DHE = 8,
-
+    /* TLS v1.2 only, anonymous ciphersuites only, no RC4 or 3DES */
+    tls_handshake_config_anonymous = 9,
+    /* TLS v1.2 to TLS v1.0, with defaults ciphersuites + 3DES */
+    tls_handshake_config_3DES_fallback = 10,
+    /* TLS v1.0, with defaults ciphersuites + 3DES */
+    tls_handshake_config_TLSv1_3DES_fallback = 11,
 } tls_handshake_config_t;
 
 
@@ -242,7 +290,6 @@ int
 tls_handshake_set_session_ticket_enabled(tls_handshake_t filter, bool enabled);
 
 /* Allow session renegotiation */
-/* NOTE: ONLY FOR TEST, THIS IS INSECURE RENEGOTIATION */
 int
 tls_handshake_set_renegotiation(tls_handshake_t filter, bool allow);
 
@@ -310,7 +357,7 @@ tls_handshake_set_psk_identity_hint(tls_handshake_t filter, tls_buffer *psk_iden
 int
 tls_handshake_set_psk_secret(tls_handshake_t filter, tls_buffer *psk_secret);
 
-/* Set client side auth type - Client only */
+/* Set client side auth type - Client only - DEPRECATE */
 int
 tls_handshake_set_client_auth_type(tls_handshake_t filter, tls_client_auth_type auth_type);
 
@@ -324,9 +371,15 @@ tls_handshake_get_peer_hostname(tls_handshake_t filter, const char **hostname, s
 int
 tls_handshake_set_client_auth(tls_handshake_t filter, bool request);
 
-/* Set acceptable CA for client side auth - Server only */
+/* Set/Get acceptable CA for client side auth - Server only */
 int
 tls_handshake_set_acceptable_dn_list(tls_handshake_t filter, DNListElem *);
+int
+tls_handshake_get_acceptable_dn_list(tls_handshake_t filter, DNListElem **);
+
+/* Set acceptable sig algs */
+int
+tls_handshake_set_sigalgs(tls_handshake_t filter, const tls_signature_and_hash_algorithm *sigalgs, unsigned n);
 
 /* Set acceptable type for client side auth - Server only */
 /* FIXME: auth_types should be const, but internally we use the same field for the server side, which is not const */
@@ -419,6 +472,9 @@ tls_handshake_set_config(tls_handshake_t filter, tls_handshake_config_t config);
 int
 tls_handshake_get_config(tls_handshake_t filter, tls_handshake_config_t *config);
 
+int
+tls_handshake_set_ems_enable(tls_handshake_t filter, bool enabled);
+
 /* Get session attributes : */
 /*==========================*/
 
@@ -447,6 +503,9 @@ tls_handshake_get_session_match(tls_handshake_t filter, tls_buffer *sessionID);
 
 const uint8_t *
 tls_handshake_get_master_secret(tls_handshake_t filter);
+
+bool
+tls_handshake_get_negotiated_ems(tls_handshake_t filter);
 
 /* Negotiation attributes */
 /*------------------------*/
@@ -540,6 +599,10 @@ tls_handshake_get_peer_sct_enabled(tls_handshake_t filter);
 /* Client: available after receiving the server_hello message */
 const tls_buffer_list_t *
 tls_handshake_get_peer_sct_list(tls_handshake_t filter);
+
+/* Server only : available after receiving the client_hello message */
+const uint16_t *
+tls_handshake_get_peer_requested_ecdh_curves(tls_handshake_t filter, unsigned *num);
 
 
 /* Special functions */

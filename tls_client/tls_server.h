@@ -16,11 +16,13 @@
 typedef struct {
     const char *hostname;
     int port;
+    const char *config;
     int protocol_min;
     int protocol_max;
     const uint16_t *ciphersuites;
     int num_ciphersuites;
     bool allow_resumption;
+    bool allow_renegotiation;
     uintptr_t session_id;
     SSLCertificate cert1;
     SSLCertificate cert2;
@@ -35,6 +37,7 @@ typedef struct {
     bool use_kext;
     bool dtls;
     bool verbose;
+    bool allow_ext_master_secret;
 } tls_server_params;
 
 

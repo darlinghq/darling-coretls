@@ -127,7 +127,7 @@ int CCSymmInit(
 	 */
 
     /* FIXME: this should not be needed as long as CCSymFinish is called */
-	if(ctx) {
+	if (ctx) {
         sslFree(ctx);
         ctx = NULL;
 	}
@@ -136,18 +136,23 @@ int CCSymmInit(
 
     ctx = sslMalloc(CTX_SIZE(cbc));
 
-    if(ctx==NULL) {
+    if (ctx == NULL) {
         sslErrorLog("CCSymmInit: Can't allocate context\n");
         return errSSLRecordInternal;
     }
 
     ctx->cbc = cbc;
 
-    cccbc_init(cbc, CTX_KEY(ctx), params->keySize, key);
-    cccbc_set_iv(cbc, CTX_IV(ctx), iv);
+    int error = 0;
+    require_noerr((error = cccbc_init(cbc, CTX_KEY(ctx), params->keySize, key)), cleanup);
+    require_noerr((error = cccbc_set_iv(cbc, CTX_IV(ctx), iv)), cleanup);
 
     *cipherCtx = ctx;
 	return 0;
+
+cleanup:
+    sslFree(ctx);
+    return error;
 }
 
 /* same for en/decrypt */
@@ -158,29 +163,29 @@ int CCSymmEncryptDecrypt(
                          size_t len,
                          SymCipherContext cipherCtx)
 {
-    if(cipherCtx == NULL || cipherCtx->cbc == NULL) {
+    if (cipherCtx == NULL || cipherCtx->cbc == NULL) {
         sslErrorLog("CCSymmEncryptDecrypt: NULL cipherCtx\n");
         return errSSLRecordInternal;
     }
 
     ASSERT((len%cipherCtx->cbc->block_size)==0);
 
-    if(len%cipherCtx->cbc->block_size) {
+    if (len%cipherCtx->cbc->block_size) {
         sslErrorLog("CCSymmEncryptDecrypt: Invalid size\n");
         return errSSLRecordInternal;
     }
 
     unsigned long nblocks = len/cipherCtx->cbc->block_size;
 
-    cccbc_update(cipherCtx->cbc, CTX_KEY(cipherCtx), CTX_IV(cipherCtx), nblocks, src, dest);
-    return 0;
+    return cccbc_update(cipherCtx->cbc, CTX_KEY(cipherCtx), CTX_IV(cipherCtx), nblocks, src, dest);
 }
 
 static
 int CCSymmFinish(
                  SymCipherContext cipherCtx)
 {
-	if(cipherCtx) {
+	if (cipherCtx) {
+        cc_clear(CTX_SIZE(cipherCtx->cbc), cipherCtx);
         sslFree(cipherCtx);
 	}
 	return 0;

@@ -77,5 +77,4 @@ add_circular(system_coretls FAT
 		xpc
 		system_asl
 )
-make_fat(system_coretls)
 install(TARGETS system_coretls DESTINATION libexec/darling/usr/lib/system)

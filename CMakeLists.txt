@@ -77,4 +77,7 @@ add_circular(system_coretls FAT
 		xpc
 		system_asl
 )
+#set_target_properties(system_coretls PROPERTIES LINK_FLAGS
+#	"-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/coretls.exp")
+
 install(TARGETS system_coretls DESTINATION libexec/darling/usr/lib/system)

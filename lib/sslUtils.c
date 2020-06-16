@@ -46,7 +46,7 @@
 #include <xpc/private.h>
 #endif
 
-#include <sys/stat.h>
+
 
 #if SSL_DEBUG
 void SSLDump(const unsigned char *data, unsigned long len)

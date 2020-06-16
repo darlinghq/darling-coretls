@@ -31,6 +31,7 @@
 #include "tls_metrics.h"
 
 #include "sslHandshake.h"
+#include "sslHandshake_priv.h"
 #include "sslMemory.h"
 #include "sslAlertMessage.h"
 #include "sslSession.h"
@@ -39,6 +40,7 @@
 #include "sslCrypto.h"
 #include "sslDigests.h"
 #include "sslCipherSpecs.h"
+#include "sslBuildFlags.h"
 
 
 #include <AssertMacros.h>
@@ -47,6 +49,10 @@
 #include <inttypes.h>
 
 #define REQUEST_CERT_CORRECT        0
+
+#ifndef ALLOW_RSA_SERVER_KEY_EXCHANGE
+#define ALLOW_RSA_SERVER_KEY_EXCHANGE 1
+#endif // ALLOW_RSA_SERVER_KEY_EXCHANGE
 
 #if __LP64__
 #define PRIstatus "d"
@@ -866,7 +872,7 @@ SSLAdvanceHandshake(SSLHandshakeType processed, tls_handshake_t ctx)
 						break;
 #if ALLOW_RSA_SERVER_KEY_EXCHANGE
                     case SSL_RSA:
-                        if(ctx->rsaEncryptPubKey.rsa.pub) {
+                        if(ctx->rsaEncryptPubKey.rsa!=NULL) {
                             doServerKeyExch = true;
                         }
                         break;

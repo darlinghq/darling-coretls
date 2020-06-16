@@ -86,14 +86,6 @@ const uint16_t KnownCipherSuites[] = {
     TLS_RSA_WITH_AES_256_CBC_SHA,
     TLS_RSA_WITH_AES_128_CBC_SHA,
     SSL_RSA_WITH_3DES_EDE_CBC_SHA,
-
-#if ENABLE_RC4
-    TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,
-    TLS_ECDHE_RSA_WITH_RC4_128_SHA,
-    SSL_RSA_WITH_RC4_128_SHA,
-    SSL_RSA_WITH_RC4_128_MD5,
-#endif
-
 };
 
 const unsigned CipherSuiteCount = sizeof(KnownCipherSuites)/sizeof(KnownCipherSuites[0]);
@@ -275,6 +267,7 @@ bool tls_handshake_kem_is_allowed(tls_handshake_config_t config, KeyExchangeMeth
 {
     switch(config) {
         case tls_handshake_config_none:
+        case tls_handshake_config_ATSv2:
             return true;
         case tls_handshake_config_ATSv1:
             return (kem == SSL_ECDHE_ECDSA || kem == SSL_ECDHE_RSA);
@@ -290,6 +283,8 @@ bool tls_handshake_kem_is_allowed(tls_handshake_config_t config, KeyExchangeMeth
         case tls_handshake_config_3DES_fallback:
         case tls_handshake_config_TLSv1_3DES_fallback:
             return (kem==SSL_RSA || kem == SSL_ECDHE_ECDSA || kem == SSL_ECDHE_RSA);
+        case tls_handshake_config_standard_TLSv3:
+            return (kem == SSL_ECDHE_ECDSA);
         case tls_handshake_config_anonymous:
             return (kem==SSL_ECDH_anon || kem == SSL_DH_anon);
     }
@@ -342,21 +337,26 @@ bool tls_handshake_sym_is_allowed(tls_handshake_config_t config, SSL_CipherAlgor
     switch(config) {
         case tls_handshake_config_none:
             return true;
+        case tls_handshake_config_ATSv2:
+            return (sym>=SSL_CipherAlgorithmAES_128_GCM);
         case tls_handshake_config_ATSv1:
         case tls_handshake_config_ATSv1_noPFS:
         case tls_handshake_config_anonymous:
         case tls_handshake_config_standard:
+            return (sym>=SSL_CipherAlgorithmAES_128_CBC && sym != SSL_CipherAlgorithmChaCha20_Poly1305);
+        case tls_handshake_config_standard_TLSv3:
             return (sym>=SSL_CipherAlgorithmAES_128_CBC);
         case tls_handshake_config_default:
         case tls_handshake_config_TLSv1_fallback:
         case tls_handshake_config_3DES_fallback:
         case tls_handshake_config_TLSv1_3DES_fallback:
-            return (sym>=SSL_CipherAlgorithm3DES_CBC);
+            return (sym>=SSL_CipherAlgorithm3DES_CBC && sym != SSL_CipherAlgorithmChaCha20_Poly1305);
         case tls_handshake_config_legacy:
         case tls_handshake_config_RC4_fallback:
         case tls_handshake_config_TLSv1_RC4_fallback:
         case tls_handshake_config_legacy_DHE:
-            return (sym==SSL_CipherAlgorithmRC4_128) || (sym>=SSL_CipherAlgorithm3DES_CBC);
+            return ((sym==SSL_CipherAlgorithmRC4_128) || (sym>=SSL_CipherAlgorithm3DES_CBC))
+                && sym != SSL_CipherAlgorithmChaCha20_Poly1305;
     }
 
     /* Note: we do this here instead of a 'default:' case, so that the compiler will warn us when
@@ -404,8 +404,10 @@ bool tls_handshake_mac_is_allowed(tls_handshake_config_t config, HMAC_Algs mac)
     switch(config) {
         case tls_handshake_config_none:
             return true;
+        case tls_handshake_config_standard_TLSv3:
         case tls_handshake_config_ATSv1:
         case tls_handshake_config_ATSv1_noPFS:
+        case tls_handshake_config_ATSv2:
         case tls_handshake_config_anonymous:
             return (mac>=HA_SHA1);
         case tls_handshake_config_default:

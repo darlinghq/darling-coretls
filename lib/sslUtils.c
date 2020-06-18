@@ -46,7 +46,9 @@
 #include <xpc/private.h>
 #endif
 
-
+#ifdef DARLING
+#include <sys/stat.h>
+#endif // DARLING
 
 #if SSL_DEBUG
 void SSLDump(const unsigned char *data, unsigned long len)

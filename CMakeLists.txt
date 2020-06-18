@@ -6,6 +6,7 @@ add_compile_options(
 
 add_definitions(
 	-DCCCBC_RETURN_INT
+	-DCORECRYPTO_DONOT_USE_TRANSPARENT_UNION
 )
 
 include_directories(
@@ -22,6 +23,8 @@ add_darling_library(coretls SHARED
 target_link_libraries(coretls system)
 make_fat(coretls)
 install(TARGETS coretls DESTINATION libexec/darling/usr/lib)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 
 set(DYLIB_INSTALL_NAME "/usr/lib/system/libsystem_coretls.dylib")
 add_circular(system_coretls FAT

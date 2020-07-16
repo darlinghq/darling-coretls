@@ -14,7 +14,7 @@ include_directories(
 )
 
 set(DYLIB_COMPAT_VERSION "1.0.0")
-set(DYLIB_CURRENT_VERSION "121.50.4")
+set(DYLIB_CURRENT_VERSION "167.0.0")
 
 set(DYLIB_INSTALL_NAME "/usr/lib/libcoretls.dylib")
 add_darling_library(coretls SHARED
@@ -23,6 +23,22 @@ add_darling_library(coretls SHARED
 target_link_libraries(coretls system)
 make_fat(coretls)
 install(TARGETS coretls DESTINATION libexec/darling/usr/lib)
+
+set(DYLIB_INSTALL_NAME "/usr/lib/libcoretls_cfhelpers.dylib")
+add_circular(coretls_cfhelpers
+	FAT
+	SOURCES
+		lib/sslMemory.c
+		coretls_cfhelpers/tls_helpers_identity.c
+		coretls_cfhelpers/tls_helpers.c
+	DEPENDENCIES
+		coretls
+		CoreFoundation
+		system
+	UPWARD
+		Security
+)
+install(TARGETS coretls_cfhelpers DESTINATION libexec/darling/usr/lib)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 

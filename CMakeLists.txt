@@ -93,6 +93,7 @@ add_circular(system_coretls FAT
 		macho
 		libdispatch_shared
 		corecrypto
+		commonCrypto
 		xpc
 		system_asl
 )

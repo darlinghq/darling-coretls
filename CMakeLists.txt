@@ -2,6 +2,7 @@ project(coreTLS)
 
 add_compile_options(
 	-nostdinc
+	-Wno-error=int-conversion
 )
 
 add_definitions(

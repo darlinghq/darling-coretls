@@ -25,21 +25,23 @@ target_link_libraries(coretls system)
 make_fat(coretls)
 install(TARGETS coretls DESTINATION libexec/darling/usr/lib)
 
-set(DYLIB_INSTALL_NAME "/usr/lib/libcoretls_cfhelpers.dylib")
-add_circular(coretls_cfhelpers
-	FAT
-	SOURCES
-		lib/sslMemory.c
-		coretls_cfhelpers/tls_helpers_identity.c
-		coretls_cfhelpers/tls_helpers.c
-	DEPENDENCIES
-		coretls
-		CoreFoundation
-		system
-	UPWARD
-		Security
-)
-install(TARGETS coretls_cfhelpers DESTINATION libexec/darling/usr/lib)
+if (COMPONENT_cli OR COMPONENT_dev_gui_common)
+	set(DYLIB_INSTALL_NAME "/usr/lib/libcoretls_cfhelpers.dylib")
+	add_circular(coretls_cfhelpers
+		FAT
+		SOURCES
+			lib/sslMemory.c
+			coretls_cfhelpers/tls_helpers_identity.c
+			coretls_cfhelpers/tls_helpers.c
+		DEPENDENCIES
+			coretls
+			CoreFoundation
+			system
+		UPWARD
+			Security
+	)
+	install(TARGETS coretls_cfhelpers DESTINATION libexec/darling/usr/lib)
+endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 

@@ -26,6 +26,7 @@ make_fat(coretls)
 install(TARGETS coretls DESTINATION libexec/darling/usr/lib)
 
 if (COMPONENT_cli OR COMPONENT_dev_gui_common)
+	set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "cli_gui_common")
 	set(DYLIB_INSTALL_NAME "/usr/lib/libcoretls_cfhelpers.dylib")
 	add_circular(coretls_cfhelpers
 		FAT
@@ -41,6 +42,7 @@ if (COMPONENT_cli OR COMPONENT_dev_gui_common)
 			Security
 	)
 	install(TARGETS coretls_cfhelpers DESTINATION libexec/darling/usr/lib)
+	set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "core")
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
